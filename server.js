@@ -22,9 +22,50 @@ app.get('/notes', (req, res) =>
 );
 
 app.get('/api/notes', (req, res) => {
+  console.info(`${req.method} request received for notes`);
+
   res.json(db);
-  
-  console.info(`GET request for notes received`);
+});
+
+app.post('/api/notes', (req, res) => {
+  console.info(`${req.method} request received to add a note`);
+
+  const {title, text} = req.body;
+
+  if (title && text) {
+    const newNote = {
+      title,
+      text,
+      note_id: uuid(),
+    };
+
+    fs.readFile('./db/db.json', 'utf8', (err, data) => {
+      if (err) {
+        console.error(err);
+      } else {
+        db.push(newNote);
+        fs.writeFileSync(
+          './db/db.json', JSON.stringify(db, null, 4),
+          (writeErr) =>
+            writeErr
+              ? console.error(writeErr)
+              : console.info('Successfully updated notes!')
+        );
+      }
+    });
+
+    const response = {
+      status: 'success',
+      body: newNote,
+    };
+
+    res.json(db);
+
+    console.log(response);
+    res.status(201).json(response);
+  } else {
+    res.status(500).json('Error in posting note');
+  }
 });
 
 app.listen(PORT, () =>
