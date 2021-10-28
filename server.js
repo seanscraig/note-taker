@@ -1,8 +1,7 @@
 const express = require("express");
 const path = require("path");
 const fs = require("fs");
-// Helper method for generating unique ids
-const uuid = require("./helpers/uuid");
+
 const db = require("./db/db.json");
 
 const app = express();
@@ -13,13 +12,17 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use(express.static("public"));
 
+
+
 app.get("/", (req, res) =>
-  res.sendFile(path.join(__dirname, '/public/index.html'))
+  res.sendFile(path.join(__dirname, "/public/index.html"))
 );
 
 app.get("/notes", (req, res) =>
-  res.sendFile(path.join(__dirname, '/public/notes.html'))
+  res.sendFile(path.join(__dirname, "/public/notes.html"))
 );
+
+
 
 app.get("/api/notes", (req, res) => {
   console.info(`${req.method} request received for notes`);
@@ -82,14 +85,44 @@ app.post("/api/notes", (req, res) => {
 
     res.json(db);
 
-    console.log(response);
     res.status(201).json(response);
   } else {
     res.status(500).json("Error in posting note");
   }
 });
 
-app.delete("api/notes/:id", (req, res) => {});
+app.delete("api/notes/:id", (req, res) => {
+  if (req.params.id) {
+    console.info(`${req.method} request received`);
+    const noteId = req.params.id;
+    for (let i = 0; i < db.length; i++) {
+
+      const currentNote = db[i];
+
+      if (currentNote.id === noteId) {
+        console.log("found match");
+        res.send(currentNote);
+        db.splice(i, 1);
+        console.log(db);
+        fs.writeFileSync(
+          "./db/db.json",
+          JSON.stringify(db, null, 4),
+          (writeErr) =>
+            writeErr
+              ? console.error(writeErr)
+              : console.info("Successfully updated notes!")
+        );
+      }
+    }
+    res.status(404).send("Note not found");
+  } else {
+    res.status(400).send("Note ID not provided");
+  }
+});
+
+app.get("*", (req, res) =>
+  res.sendFile(path.join(__dirname, "/public/index.html"))
+);
 
 app.listen(PORT, () =>
   console.log(`App listening at http://localhost:${PORT} 🚀`)
