@@ -1,9 +1,9 @@
-const express = require('express');
-const path = require('path');
-const fs = require('fs');
+const express = require("express");
+const path = require("path");
+const fs = require("fs");
 // Helper method for generating unique ids
-const uuid = require('./helpers/uuid');
-const db = require('./db/db.json');
+const uuid = require("./helpers/uuid");
+const db = require("./db/db.json");
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -11,51 +11,72 @@ const PORT = process.env.PORT || 3001;
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-app.use(express.static('public'));
+app.use(express.static("public"));
 
-app.get('/', (req, res) =>
+app.get("/", (req, res) =>
   res.sendFile(path.join(__dirname, '/public/index.html'))
 );
 
-app.get('/notes', (req, res) =>
+app.get("/notes", (req, res) =>
   res.sendFile(path.join(__dirname, '/public/notes.html'))
 );
 
-app.get('/api/notes', (req, res) => {
+app.get("/api/notes", (req, res) => {
   console.info(`${req.method} request received for notes`);
 
   res.json(db);
 });
 
-app.post('/api/notes', (req, res) => {
+app.get("/api/notes:id", (req, res) => {
+  if (req.params.id) {
+    console.info(`${req.method} request received to get a single note`);
+    const noteId = req.params.id;
+    for (let i = 0; i < db.length; i++) {
+      const currentNote = db[i];
+      if (currentNote.id === noteId) {
+        res.json(currentNote);
+        return;
+      }
+    }
+    res.status(404).send("Note not found");
+  } else {
+    res.status(400).send("Note ID not provided");
+  }
+});
+
+app.post("/api/notes", (req, res) => {
   console.info(`${req.method} request received to add a note`);
 
-  const {title, text} = req.body;
+  const { title, text } = req.body;
+
+  let currentId = db.length;
 
   if (title && text) {
     const newNote = {
       title,
       text,
-      note_id: uuid(),
+      id: currentId + 1,
     };
 
-    fs.readFile('./db/db.json', 'utf8', (err, data) => {
+    fs.readFile("./db/db.json", "utf8", (err, data) => {
       if (err) {
         console.error(err);
       } else {
         db.push(newNote);
+
         fs.writeFileSync(
-          './db/db.json', JSON.stringify(db, null, 4),
+          "./db/db.json",
+          JSON.stringify(db, null, 4),
           (writeErr) =>
             writeErr
               ? console.error(writeErr)
-              : console.info('Successfully updated notes!')
+              : console.info("Successfully updated notes!")
         );
       }
     });
 
     const response = {
-      status: 'success',
+      status: "success",
       body: newNote,
     };
 
@@ -64,13 +85,11 @@ app.post('/api/notes', (req, res) => {
     console.log(response);
     res.status(201).json(response);
   } else {
-    res.status(500).json('Error in posting note');
+    res.status(500).json("Error in posting note");
   }
 });
 
-app.delete('api/notes/:note_id', (req, res) => {
-  
-}) 
+app.delete("api/notes/:id", (req, res) => {});
 
 app.listen(PORT, () =>
   console.log(`App listening at http://localhost:${PORT} 🚀`)
